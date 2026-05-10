@@ -15,27 +15,38 @@ typedef struct chunk {
     // 用户数据区域开始
 } chunk_t;
 
+// Fast Bin 配置
+#define FASTBIN_CHUNK_MAX 96   // 最大 fast bin chunk 大小（含头部，即用户最大请求 64 字节）
+#define NUM_FASTBINS     4     // fast bin 数量（chunk 大小 48/64/80/96）
+#define FASTBIN_IDX(cs)  (((cs) >> 4) - 3)  // 48→0, 64→1, 80→2, 96→3
+
+// Arena 池大小（每个线程 arena 的 mmap 大小）
+#define ARENA_POOL_SIZE (1024 * 1024)  // 1MB
+
 // Arena 结构
 typedef struct arena {
-    chunk_t *top;          // 当前 arena 的 top chunk
-    size_t system_mem;     // 从系统分配的总内存
-    struct arena *next;    // 下一个 arena
-    pthread_mutex_t lock;  // 线程安全锁
+    chunk_t *top;            // 当前 arena 的 top chunk
+    size_t system_mem;       // 从系统分配的总内存
+    struct arena *next;      // 下一个 arena（用于 malloc_dump_arenas 遍历）
+    pthread_mutex_t lock;    // 线程安全锁
     size_t allocation_count; // 该 arena 的分配次数
-    size_t free_count;     // 该 arena 的释放次数
+    size_t free_count;       // 该 arena 的释放次数
+    void *pool_base;         // mmap 内存池基地址
+    size_t pool_size;        // mmap 内存池大小
+    struct arena *global_next; // 全局 arena 链表（用于 ptr→arena 查找）
 } arena_t;
 
 // 内存分配器状态
 typedef struct malloc_state {
-    arena_t *main_arena;   // 主 arena
-    chunk_t *bins[64];     // 64 个 bin 指针
-    pthread_mutex_t global_lock;  // 全局锁
-    arena_t *current_arena;      // 当前线程的 arena
-    size_t total_allocations;    // 总分配次数
-    size_t total_frees;         // 总释放次数
-    size_t current_allocations;  // 当前活跃分配数
-    size_t total_bytes_allocated;// 总分配字节数
-    size_t total_bytes_freed;   // 总释放字节数
+    arena_t *main_arena;     // 主 arena
+    chunk_t *bins[64];       // 64 个常规 bin 指针
+    chunk_t *fastbins[NUM_FASTBINS]; // fast bin 单链表头
+    pthread_mutex_t global_lock;     // 全局锁
+    size_t total_allocations;        // 总分配次数
+    size_t total_frees;             // 总释放次数
+    size_t current_allocations;     // 当前活跃分配数
+    size_t total_bytes_allocated;   // 总分配字节数
+    size_t total_bytes_freed;       // 总释放字节数
 } malloc_state_t;
 
 // 调试信息结构
