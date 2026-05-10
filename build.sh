@@ -4,6 +4,8 @@
 
 set -e  # 遇到错误时退出
 
+OUTPUT_DIR="output"
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -39,8 +41,7 @@ check_command() {
 # 清理构建文件
 clean() {
     print_info "Cleaning build files..."
-    rm -f test_malloc
-    rm -rf *.o
+    rm -rf "${OUTPUT_DIR:?}"/*
     print_success "Clean completed."
 }
 
@@ -51,11 +52,24 @@ build() {
     # 检查编译器
     check_command gcc
 
-    # 编译
-    gcc -Wall -Wextra -std=c17 -O2 -Iinclude -o test_malloc src/malloc.c tests/test_malloc.c
+    # 创建输出目录
+    mkdir -p "${OUTPUT_DIR}"
+
+    # 编译测试程序
+    echo "  [1/4] test_malloc..."
+    gcc -Wall -Wextra -std=c17 -O2 -Iinclude -o "${OUTPUT_DIR}/test_malloc" src/malloc.c tests/test_malloc.c
+
+    echo "  [2/4] test_thread..."
+    gcc -Wall -Wextra -std=c17 -O2 -Iinclude -o "${OUTPUT_DIR}/test_thread" src/malloc.c tests/test_thread.c -lpthread
+
+    echo "  [3/4] test_debug..."
+    gcc -Wall -Wextra -std=c17 -O2 -Iinclude -o "${OUTPUT_DIR}/test_debug" src/malloc.c tests/test_debug.c
+
+    echo "  [4/4] debug_malloc..."
+    gcc -Wall -Wextra -std=c17 -O2 -Iinclude -o "${OUTPUT_DIR}/debug_malloc" src/malloc.c tests/debug_malloc.c -lpthread
 
     if [ $? -eq 0 ]; then
-        print_success "Build completed successfully."
+        print_success "Build completed successfully. All binaries in ${OUTPUT_DIR}/"
     else
         print_error "Build failed."
         exit 1
@@ -66,12 +80,12 @@ build() {
 test() {
     print_info "Running tests..."
 
-    if [ ! -f "test_malloc" ]; then
+    if [ ! -f "${OUTPUT_DIR}/test_malloc" ]; then
         print_warning "Binary not found, building first..."
         build
     fi
 
-    ./test_malloc
+    ./"${OUTPUT_DIR}/test_malloc"
 
     if [ $? -eq 0 ]; then
         print_success "All tests passed!"
@@ -85,12 +99,12 @@ test() {
 valgrind_check() {
     print_info "Running valgrind check..."
 
-    if [ ! -f "test_malloc" ]; then
+    if [ ! -f "${OUTPUT_DIR}/test_malloc" ]; then
         print_warning "Binary not found, building first..."
         build
     fi
 
-    valgrind --leak-check=full --show-reachable=yes --track-origins=yes ./test_malloc
+    valgrind --leak-check=full --show-reachable=yes --track-origins=yes ./"${OUTPUT_DIR}/test_malloc"
 
     if [ $? -eq 0 ]; then
         print_success "Valgrind check completed."

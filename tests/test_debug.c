@@ -1,4 +1,4 @@
-#include "../include/my_malloc.h"
+#include "../include/malloc.h"
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -94,16 +94,16 @@ void test_debug_functions() {
     (void)ptr3;  // 确保ptr3被使用，避免未使用变量警告
 
     // 打印统计信息
-    my_malloc_dump_stats();
-    my_malloc_dump_bins();
-    my_malloc_dump_arenas();
+    malloc_dump_stats();
+    malloc_dump_bins();
+    malloc_dump_arenas();
 
     // 释放部分内存
     my_free(ptr1);
     my_free(ptr2);
 
     // 检查内存泄漏
-    my_malloc_check_leaks();
+    malloc_check_leaks();
 
     // 释放剩余内存
     my_free(ptr3);
@@ -113,7 +113,7 @@ void test_debug_functions() {
 
 int main() {
     // 初始化分配器
-    my_malloc_init();
+    malloc_init();
 
     test_basic_allocation();
     test_my_calloc();

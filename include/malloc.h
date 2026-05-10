@@ -65,6 +65,12 @@ extern "C" {
 #define IS_MMAP 0x2
 
 // Bin 索引计算
+// 设计原理：根据 chunk 大小将空闲 chunk 分类到不同 bin，加速大小匹配。
+// 分类策略：小内存（≤64B）粒度为 16B；中等内存（≤512B）粒度为 256B；
+// 大内存（≤4096B）粒度为 1024B；超大内存（>4096B）统一归入 bin 62。
+// 注意：BIN_INDEX 的分段粒度是不均匀的，小内存分段更细以降低内碎片。
+// 缺陷：没有 fast bin（单链表、不合并）和 unsorted bin（缓存最近释放的 chunk），
+// 导致小内存频繁分配释放时性能较差。
 #define BIN_INDEX(size) ((size) <= 64 ? ((size) >> 4) : \
                        (size) <= 512 ? (((size) >> 8) + 4) : \
                        (size) <= 4096 ? (((size) >> 10) + 8) : \
@@ -86,6 +92,9 @@ void *my_realloc(void *ptr, size_t size);
 size_t get_chunk_size(chunk_t *chunk);
 void set_chunk_size(chunk_t *chunk, size_t size, int flags);
 int is_mmap_chunk(chunk_t *chunk);
+
+// 初始化
+void malloc_init();
 
 // 调试接口
 void malloc_dump_stats();

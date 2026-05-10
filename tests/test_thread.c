@@ -19,7 +19,7 @@ void *thread_function(void *arg) {
     // 执行一系列内存分配和释放操作
     for (int i = 0; i < NUM_ALLOCATIONS; i++) {
         size_t size = (i % 100) + 1;  // 分配 1-100 字节
-        void *ptr = malloc(size);
+        void *ptr = my_malloc(size);
         assert(ptr != NULL);
         allocated_ptrs[allocated_count++] = ptr;
 
@@ -29,7 +29,7 @@ void *thread_function(void *arg) {
         // 随机释放一些内存
         if (i % 3 == 0 && allocated_count > 0) {
             int index = allocated_count - 1;
-            free(allocated_ptrs[index]);
+            my_free(allocated_ptrs[index]);
             allocated_ptrs[index] = NULL;
             allocated_count--;
         }
@@ -38,16 +38,13 @@ void *thread_function(void *arg) {
     // 释放所有剩余的内存
     for (int i = 0; i < allocated_count; i++) {
         if (allocated_ptrs[i] != NULL) {
-            free(allocated_ptrs[i]);
+            my_free(allocated_ptrs[i]);
         }
     }
 
     printf("Thread %d completed\n", thread_id);
     return NULL;
 }
-
-// 声明 malloc_init 函数
-void malloc_init(void);
 
 int main() {
     // 初始化分配器
@@ -72,16 +69,16 @@ int main() {
     // 执行一些额外的测试
     printf("Testing basic allocation after multithreading...\n");
 
-    void *ptr1 = malloc(16);
+    void *ptr1 = my_malloc(16);
     assert(ptr1 != NULL);
     printf("Allocated 16 bytes at %p\n", ptr1);
 
-    void *ptr2 = malloc(32);
+    void *ptr2 = my_malloc(32);
     assert(ptr2 != NULL);
     printf("Allocated 32 bytes at %p\n", ptr2);
 
-    free(ptr1);
-    free(ptr2);
+    my_free(ptr1);
+    my_free(ptr2);
 
     printf("All tests passed!\n");
     return 0;
